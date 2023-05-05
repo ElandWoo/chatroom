@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Chat Room</title>
+  <script>
+    window.addEventListener("DOMContentLoaded", function() {
+      var ws = new WebSocket("ws://" + window.location.host + "/ws");
+
+      ws.onopen = function() {
+        console.log("Connected to chat");
+      };
+
+      ws.onmessage = function(event) {
+        var messageContainer = document.getElementById("messages");
+        var message = document.createElement("li");
+        message.innerText = event.data;
+        messageContainer.appendChild(message);
+      };
+
+      ws.onclose = function() {
+        console.log("Disconnected from chat");
+      };
+
+      var chatForm = document.getElementById("chat-form");
+      chatForm.addEventListener("submit", function(event) {
+        event.preventDefault();
+        var messageInput = document.getElementById("message");
+        ws.send(messageInput.value);
+        messageInput.value = "";
+      });
+    });
+  </script>
+</head>
+<body>
+<h1>Chat Room</h1>
+<ul id="messages"></ul>
+<form id="chat-form">
+  <input type="text" id="message">
+  <button type="submit">Send</button>
+</form>
+</body>
+</html>
