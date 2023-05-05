@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Chat Room</title>
+  <script>
+    var socket;
+
+    function connect() {
+      var username = document.getElementById("username").value;
+      var password = document.getElementById("password").value;
+      var xhr = new XMLHttpRequest();
+      xhr.open("POST", "/login");
+      xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+      xhr.onreadystatechange = function() {
+        if (xhr.readyState == 4 && xhr.status == 200) {
+          document.getElementById("login").style.display = "none";
+          document.getElementById("chatroom").style.display = "block";
+          socket = new WebSocket("ws://localhost:8080/ws");
+          socket.onmessage = function(event) {
+            var msg = JSON.parse(event.data);
+            var chat = document.getElementById("chat");
+            var line = document.createElement("p");
+            line.innerText = msg.username + ": " + msg.message;
+            chat.appendChild(line);
+          }
+        } else if (xhr.readyState == 4) {
+          alert(xhr.responseText);
+        }
+      };
+      xhr.send("username=" + encodeURIComponent(username) + "&password=" + encodeURIComponent(password));
+    }
+
+    function sendMessage() {
+      var username = document.getElementById("username").value;
+      var message = document.getElementById("message").value;
+      var msg = { username: username, message: message };
+      socket.send(JSON.stringify(msg));
+      document.getElementById("message").value = "";
+    }
+  </script>
+</head>
+<body>
+<div id="login">
+  <form>
+    <label>Username:</label>
+    <input type="text" id="username"><br>
+    <label>Password:</label>
+    <input type="password" id="password"><br>
+    <button type="button" onclick="connect()">Connect</button>
+  </form>
+</div>
+<div id="chatroom" style="display:none">
+  <div id="chat"></div>
+  <input type="text" id="message" placeholder="Message" onkeydown="if (event.keyCode == 13) sendMessage()">
+  <button onclick="sendMessage()">Send</button>
+</div>
+</body>
+</html>
