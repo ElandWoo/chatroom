@@ -1,13 +1,14 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
+
+	"github.com/gin-gonic/gin"
+	_ "github.com/go-sql-driver/mysql"
+	"github.com/gorilla/websocket"
 	"net/http"
 	"sync"
-	"database/sql"
-	"github.com/go-sql-driver/mysql"
-	"github.com/gin-gonic/gin"
-	"github.com/gorilla/websocket"
 )
 
 var (
@@ -25,6 +26,25 @@ var (
 )
 
 func main() {
+	// 打开一个数据库连接
+	db, err := sql.Open("mysql", "root:wyn117836@tcp(127.0.0.1:3306)/chatroom")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	// Close the database connection
+	defer db.Close()
+
+	// Test the database connection
+	err = db.Ping()
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	fmt.Println("Connected to MySQL database!")
+	// 打开一个路由
 	router := gin.Default()
 	router.LoadHTMLGlob("templates/*.html")
 
@@ -46,8 +66,28 @@ func main() {
 			return
 		}
 
+		// 查询用户信息
+		var storedPassword string
+		query := "SELECT password FROM users WHERE username = ?"
+		err := db.QueryRow(query, username).Scan(&storedPassword)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid username or password"})
+			} else {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to query user information"})
+			}
+			return
+		}
+
+		// 验证用户密码
+		if password != storedPassword {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid username or password"})
+			return
+		}
+
 		c.Redirect(http.StatusMovedPermanently, "/chat")
 	})
+
 
 	// sign up 	Interface
 	router.GET("/register", func(c *gin.Context) {
@@ -70,11 +110,18 @@ func main() {
 			return
 		}
 
-		// TODO: 将用户注册信息保存到数据库中
+		// 将用户注册信息保存到数据库中
+		insertQuery := "INSERT INTO users (username, password) VALUES (?, ?);"
+		_, err := db.Exec(insertQuery, username, password)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to register user"})
+			return
+		}
 
 		// 注册成功，跳转到聊天室页面
 		c.Redirect(http.StatusMovedPermanently, "/chat")
 	})
+
 
 	// chat Interface
 	router.GET("/chat", func(c *gin.Context) {
