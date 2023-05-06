@@ -16,7 +16,7 @@ var (
 		ReadBufferSize:  1024,
 		WriteBufferSize: 1024,
 	}
-	msgChan = make(chan string) // 定义全局的消息通道
+	msgChan = make(chan Message) // 定义全局的消息通道
 
 	// 建立一个WebSocket连接的映射，并使用互斥锁进行保护
 	conns = struct {
@@ -24,6 +24,13 @@ var (
 		m map[*websocket.Conn]bool
 	}{m: make(map[*websocket.Conn]bool)}
 )
+
+type Message struct {
+	Sender  string
+	Content string
+}
+
+
 
 func main() {
 	// 打开一个数据库连接
@@ -85,6 +92,14 @@ func main() {
 			return
 		}
 
+		// 设置Cookie
+		usernameCookie := http.Cookie{
+			Name:  "username",
+			Value: username,
+			Path:  "/",
+		}
+		http.SetCookie(c.Writer, &usernameCookie)
+
 		c.Redirect(http.StatusMovedPermanently, "/chat")
 	})
 
@@ -117,7 +132,13 @@ func main() {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to register user"})
 			return
 		}
-
+		// 设置Cookie
+		usernameCookie := http.Cookie{
+			Name:  "username",
+			Value: username,
+			Path:  "/",
+		}
+		http.SetCookie(c.Writer, &usernameCookie)
 		// 注册成功，跳转到聊天室页面
 		c.Redirect(http.StatusMovedPermanently, "/chat")
 	})
@@ -133,28 +154,57 @@ func main() {
 		wshandler(c.Writer, c.Request)
 	})
 
-	// 启动消息广播协程
+	// 在 main 函数中启动消息广播和消息保存到数据库的协程
 	go func() {
 		for {
-			msg := <-msgChan
-			broadcast(msg)
+			msg := <-msgChan // 改为 Message 类型
+
+			// 将消息存储到数据库中
+			insertQuery := "INSERT INTO messages (sender, message) VALUES (?, ?)"
+			_, err := db.Exec(insertQuery, msg.Sender, msg.Content)
+			if err != nil {
+				fmt.Printf("Failed to insert message to database: %v", err)
+				continue
+			}
+
+			// 广播消息给所有连接的 WebSocket 客户端
+			conns.RLock()
+			for conn := range conns.m {
+				if err := conn.WriteMessage(websocket.TextMessage, []byte(msg.Content)); err != nil {
+					fmt.Printf("Failed to broadcast message: %+v\n", err)
+				}
+			}
+			conns.RUnlock()
 		}
 	}()
+
+
+
 
 	router.Run(":8080")
 }
 
 func wshandler(w http.ResponseWriter, r *http.Request) {
+	// 升级连接为 WebSocket
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		fmt.Printf("Failed to set websocket upgrade: %+v\n", err)
 		return
 	}
 
-	// 将新的WebSocket连接添加到映射中
+	// 将新的 WebSocket 连接添加到映射中
 	conns.Lock()
 	conns.m[conn] = true
 	conns.Unlock()
+
+	// 在这个位置获取客户端IP地址
+	ip := r.RemoteAddr
+	cookie, err := r.Cookie("username")
+	if err != nil {
+		fmt.Println("Error getting username from cookie:", err)
+		return
+	}
+	username := cookie.Value
 
 	defer func() {
 		// 当连接断开时，从映射中移除
@@ -163,24 +213,33 @@ func wshandler(w http.ResponseWriter, r *http.Request) {
 		conns.Unlock()
 	}()
 
+	// 读取消息信息
 	for {
 		_, msg, err := conn.ReadMessage()
 		if err != nil {
 			break
 		}
 
-		// 将消息发送到全局的消息通道
-		msgChan <- string(msg)
-	}
-}
-
-func broadcast(msg string) {
-	conns.RLock()
-	defer conns.RUnlock()
-
-	for conn := range conns.m {
-		if err := conn.WriteMessage(websocket.TextMessage, []byte(msg)); err != nil {
-			fmt.Printf("Failed to broadcast message: %+v\n", err)
+		message := Message{
+			Sender:  username,
+			Content: fmt.Sprintf("%s (%s): %s", username, ip, string(msg)),
 		}
+
+		// 将消息发送到全局消息通道
+		msgChan <- message
 	}
+
 }
+
+
+//func broadcast(username, ip, msg string) {
+//	conns.RLock()
+//	defer conns.RUnlock()
+//
+//	message := fmt.Sprintf("%s (%s): %s", username, ip, msg)
+//	for conn := range conns.m {
+//		if err := conn.WriteMessage(websocket.TextMessage, []byte(message)); err != nil {
+//			fmt.Printf("Failed to broadcast message: %+v\n", err)
+//		}
+//	}
+//}

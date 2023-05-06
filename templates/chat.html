@@ -136,7 +136,24 @@
       ws.onmessage = function(event) {
         var messageContainer = document.getElementById("messages");
         var message = document.createElement("li");
-        message.innerText = event.data;
+
+        // 解析收到的消息，获取用户名、IP地址和实际消息
+        var parsedMessage = event.data.split(/:(.+)/, 2);
+        var userInfo = parsedMessage[0];
+        var msgText = parsedMessage[1];
+
+        // 创建包含用户名和IP地址的子元素
+        var userElement = document.createElement("strong");
+        userElement.innerText = userInfo + ": ";
+
+        // 创建包含实际消息的子元素
+        var msgElement = document.createElement("span");
+        msgElement.innerText = msgText;
+
+        // 将子元素添加到消息元素中
+        message.appendChild(userElement);
+        message.appendChild(msgElement);
+
         messageContainer.appendChild(message);
 
         // 将滚动条滚动到最底部
