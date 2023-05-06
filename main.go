@@ -4,7 +4,8 @@ import (
 	"fmt"
 	"net/http"
 	"sync"
-
+	"database/sql"
+	"github.com/go-sql-driver/mysql"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 )
@@ -31,6 +32,7 @@ func main() {
 		c.HTML(http.StatusOK, "index.html", nil)
 	})
 
+	// sign in Interface
 	router.GET("/login", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "login.html", nil)
 	})
@@ -47,10 +49,39 @@ func main() {
 		c.Redirect(http.StatusMovedPermanently, "/chat")
 	})
 
+	// sign up 	Interface
+	router.GET("/register", func(c *gin.Context) {
+		c.HTML(http.StatusOK, "register.html", nil)
+	})
+
+	router.POST("/register", func(c *gin.Context) {
+		username := c.PostForm("username")
+		password := c.PostForm("password")
+		confirm_password := c.PostForm("confirm_password")
+
+		// 判断用户名和密码是否为空
+		if username == "" || password == "" || confirm_password == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Username and password are required"})
+			return
+		}
+		// 判断密码是否一致
+		if password != confirm_password {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Passwords do not match"})
+			return
+		}
+
+		// TODO: 将用户注册信息保存到数据库中
+
+		// 注册成功，跳转到聊天室页面
+		c.Redirect(http.StatusMovedPermanently, "/chat")
+	})
+
+	// chat Interface
 	router.GET("/chat", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "chat.html", nil)
 	})
 
+	//
 	router.GET("/ws", func(c *gin.Context) {
 		wshandler(c.Writer, c.Request)
 	})

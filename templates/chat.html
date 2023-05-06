@@ -2,6 +2,129 @@
 <html>
 <head>
   <title>Chat Room</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      background-color: #f2f2f2;
+      font-family: Arial, Helvetica, sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+
+    h1 {
+      color: #333333;
+      text-align: center;
+      margin: 20px 0;
+    }
+
+    ul {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    li {
+      background-color: #ffffff;
+      border-radius: 5px;
+      box-shadow: 0px 0px 10px 0px rgba(0, 0, 0, 0.1);
+      padding: 10px;
+      margin: 10px 0;
+    }
+
+    form {
+      background-color: #ffffff;
+      border-radius: 5px;
+      box-shadow: 0px 0px 10px 0px rgba(0, 0, 0, 0.1);
+      padding: 20px;
+      text-align: center;
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+    }
+
+    input[type="text"] {
+      border: none;
+      border-radius: 5px;
+      box-shadow: 0px 0px 10px 0px rgba(0, 0, 0, 0.1);
+      padding: 10px;
+      margin-right: 10px;
+      width: 80%;
+      font-size: 16px;
+    }
+
+    button[type="submit"] {
+      background-color: #4CAF50;
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+      font-size: 16px;
+    }
+
+    button[type="submit"]:hover {
+      background-color: #3e8e41;
+    }
+    html, body {
+      height: 100%;
+      margin: 0;
+    }
+
+    h1 {
+      text-align: center;
+      margin-top: 20px;
+    }
+
+    #messages {
+      height: calc(100% - 150px);
+      overflow-y: scroll;
+    }
+
+    #chat-form {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      background-color: #f2f2f2;
+      padding: 10px;
+      box-sizing: border-box;
+      display: flex;
+    }
+
+    #chat-form input[type="text"] {
+      flex: 1;
+      padding: 10px;
+      border: none;
+      border-radius: 5px;
+      margin-right: 10px;
+      box-sizing: border-box;
+    }
+
+    #chat-form button[type="submit"] {
+      background-color: #4CAF50;
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+
+    #chat-form button[type="submit"]:hover {
+      background-color: #3e8e41;
+    }
+
+    .chat-form-fixed {
+      position: fixed;
+      bottom: 0;
+    }
+
+  </style>
   <script>
     window.addEventListener("DOMContentLoaded", function() {
       var ws = new WebSocket("ws://" + window.location.host + "/ws");
@@ -15,6 +138,9 @@
         var message = document.createElement("li");
         message.innerText = event.data;
         messageContainer.appendChild(message);
+
+        // 将滚动条滚动到最底部
+        messageContainer.scrollTop = messageContainer.scrollHeight;
       };
 
       ws.onclose = function() {
@@ -29,13 +155,17 @@
         messageInput.value = "";
       });
     });
+
+
   </script>
 </head>
 <body>
 <h1>Chat Room</h1>
+
+<ul id="users"></ul>
 <ul id="messages"></ul>
 <form id="chat-form">
-  <input type="text" id="message">
+  <input type="text" id="message" placeholder="Type your message here...">
   <button type="submit">Send</button>
 </form>
 </body>

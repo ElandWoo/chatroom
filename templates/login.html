@@ -2,6 +2,61 @@
 <html>
 <head>
     <title>Login</title>
+    <script>
+        const registerButton = document.getElementById('register-button');
+        registerButton.addEventListener('click', function() {
+            window.location.href = '/register';
+        });
+    </script>
+
+    <style>
+        body {
+            background-color: #f2f2f2;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+        h1 {
+            text-align: center;
+            color: #333333;
+        }
+
+        form {
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0px 0px 10px 0px rgba(0, 0, 0, 0.1);
+            max-width: 400px;
+            margin: 0 auto;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        input[type="text"],
+        input[type="password"] {
+            width: 100%;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #cccccc;
+            margin-bottom: 10px;
+            box-sizing: border-box;
+        }
+
+        button[type="submit"], button[type="button"] {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        button[type="submit"]:hover {
+            background-color: #3e8e41;
+        }
+    </style>
 </head>
 <body>
 <h1>Login</h1>
@@ -11,9 +66,13 @@
     <br>
     <label for="password">Password:</label>
     <input type="password" id="password" name="password">
-    <
     <br>
-    <button type="submit">Login</button>
+    <form action="/login" method="post">
+        <!-- ... -->
+        <button type="submit">Sign in</button>
+        <a href="/register" class="register"><button type="button">Sign up</button></a>
+    </form>
+
 </form>
 </body>
 </html>
