@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"fmt"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	_ "github.com/go-sql-driver/mysql"
@@ -21,8 +22,9 @@ var (
 	// 建立一个WebSocket连接的映射，并使用互斥锁进行保护
 	conns = struct {
 		sync.RWMutex
-		m map[*websocket.Conn]bool
-	}{m: make(map[*websocket.Conn]bool)}
+		m map[*websocket.Conn]string
+	}{m: make(map[*websocket.Conn]string)}
+
 )
 
 type Message struct {
@@ -178,9 +180,6 @@ func main() {
 		}
 	}()
 
-
-
-
 	router.Run(":8080")
 }
 
@@ -192,12 +191,7 @@ func wshandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 将新的 WebSocket 连接添加到映射中
-	conns.Lock()
-	conns.m[conn] = true
-	conns.Unlock()
-
-	// 在这个位置获取客户端IP地址
+	// 在这个位置获取客户端IP地址和用户名
 	ip := r.RemoteAddr
 	cookie, err := r.Cookie("username")
 	if err != nil {
@@ -206,11 +200,22 @@ func wshandler(w http.ResponseWriter, r *http.Request) {
 	}
 	username := cookie.Value
 
+	// 将新的 WebSocket 连接添加到映射中
+	conns.Lock()
+	conns.m[conn] = username
+	conns.Unlock()
+
+	// 在连接建立后发送在线用户列表
+	sendUserList()
+
 	defer func() {
 		// 当连接断开时，从映射中移除
 		conns.Lock()
 		delete(conns.m, conn)
 		conns.Unlock()
+
+		// 在连接断开后发送在线用户列表
+		sendUserList()
 	}()
 
 	// 读取消息信息
@@ -229,6 +234,23 @@ func wshandler(w http.ResponseWriter, r *http.Request) {
 		msgChan <- message
 	}
 
+}
+
+func sendUserList() {
+	conns.RLock()
+	defer conns.RUnlock()
+
+	var userList []string
+	for _, username := range conns.m {
+		userList = append(userList, username)
+	}
+
+	userListMessage := strings.Join(userList, ", ")
+	for conn := range conns.m {
+		if err := conn.WriteMessage(websocket.TextMessage, []byte("Online users: " + userListMessage)); err != nil {
+			fmt.Printf("Failed to send user list: %+v\n", err)
+		}
+	}
 }
 
 
