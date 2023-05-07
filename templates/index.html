@@ -8,20 +8,30 @@
     }
 
     body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
       background-color: #f2f2f2;
       font-family: Arial, Helvetica, sans-serif;
-      margin: 0;
-      padding: 0;
+    }
+
+    .container {
+      text-align: center;
+    }
+
+    .logo {
+      margin-bottom: 0px;
     }
 
     h1 {
       color: #333333;
-      text-align: center;
       margin: 20px 0;
     }
 
     p {
-      text-align: center;
+      margin: 10px 0;
     }
 
     a {
@@ -30,8 +40,12 @@
   </style>
 </head>
 <body>
-<h1>Welcome to the chat room!</h1>
-<p>Please <a href="/login">sign in</a> to start chatting.</p>
-<p>If you don't have an account, please <a href="/register">sign up</a> to get started.</p>
+<div class="container">
+  <img src="./images/avator.png" alt="Logo" class="logo" width="200" height="325">
+  <h1>Welcome to the chat room!</h1>
+  <p>Please <a href="/login">sign in</a> to start chatting.</p>
+  <p>If you don't have an account, please <a href="/register">sign up</a> to get started.</p>
+  <p>And sincere suggestion to visit <a href="https://elandwoo.github.io">my personal webpage</a>.</p>
+</div>
 </body>
 </html>

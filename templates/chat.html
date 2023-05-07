@@ -1,80 +1,223 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Chat Room</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Room</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            display: flex;
+            height: 100vh;
+            background-color: #f2f2f2;
+            font-family: Arial, Helvetica, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+
+        h1 {
+            color: #333333;
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        ul {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        li {
+            background-color: #ffffff;
+            border-radius: 5px;
+            box-shadow: 0px 0px 10px 0px rgba(0, 0, 0, 0.1);
+            padding: 10px;
+            margin: 10px 0;
+        }
+        .user-list {
+          padding: 20px;
+          overflow-y: auto;
+          margin: 10px;
+          border: 1px solid #ccc;
+          border-radius: 5px;
+          width: 200px;
+          height: calc(100% - 40px); /* 确保高度足够显示标题和在线用户列表 */
+          flex: 1;
+          background-color: #f0f0f0;
+        }
+
+        .chat-container {
+            flex: 3;
+            display: flex;
+            flex-direction: column;
+            background-color: #fff;
+            padding: 20px;
+        }
+
+        .messages {
+            flex: 1;
+            overflow-y: auto;
+            padding-bottom: 10px;
+        }
+
+        #messages {
+            height: calc(100% - 150px);
+            overflow-y: scroll;
+        }
+
+        .input-container {
+            display: flex;
+            align-items: center;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 5px;
+            border: none;
+            border-radius: 5px;
+            box-shadow: 0px 0px 10px 0px rgba(0, 0, 0, 0.1);
+            margin-right: 10px;
+            width: 80%;
+            font-size: 16px;
+        }
+
+        button {
+            padding: 5px 10px;
+            margin-left: 5px;
+            cursor: pointer;
+        }
+
+        #chat-form {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 75%;
+            background-color: #f2f2f2;
+            padding: 10px;
+            box-sizing: border-box;
+            display: flex;
+        }
+
+        #chat-form input[type="text"] {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            margin-right: 10px;
+            box-sizing: border-box;
+        }
+
+        #chat-form button[type="submit"] {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        #chat-form button[type="submit"]:hover {
+            background-color: #3e8e41;
+        }
+
+        .chat-form-fixed {
+            position: fixed;
+            bottom: 0;
+        }
+
+        button[type="submit"] {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            font-size: 16px;
+        }
+    </style>
 </head>
 <body>
 <div class="user-list" id="user-list">
-  <h3>Online Users</h3>
-  <!-- 在线用户列表将在这里显示 -->
+    <h3>Online Users</h3>
+    <!-- 在线用户列表将在这里显示 -->
 </div>
 
 <div class="chat-container">
-  <div class="messages" id="messages">
-    <!-- 聊天消息将在这里显示 -->
-  </div>
-  <div class="input-container">
-    <input type="text" id="message" placeholder="Type your message...">
-    <button id="submit" type="submit">Send</button>
-  </div>
+    <div class="messages" id="messages">
+        <!-- 聊天消息将在这里显示 -->
+    </div>
+    <div class="input-container">
+        <input type="text" id="message" placeholder="Type your message...">
+        <button id="submit" type="submit">Send</button>
+    </div>
 </div>
 <script>
-    window.addEventListener("DOMContentLoaded", function() {
-    var ws = new WebSocket("ws://" + window.location.host + "/ws");
+    window.addEventListener("DOMContentLoaded", function () {
+        var ws = new WebSocket("ws://" + window.location.host + "/ws");
 
-    function handleUserList(data) {
-    const userList = document.querySelector(".user-list");
-    userList.innerHTML = data.slice("Online users: ".length).replace(/,/g, "<br>");
-  }
+        function handleUserList(data) {
+            const userList = document.querySelector(".user-list");
+            userList.innerHTML = data.slice("Online users: ".length).replace(/,/g, "<br>");
+        }
 
-    function handleMessage(data) {
-    const messageContainer = document.getElementById("messages");
-    const message = document.createElement("li");
+        function handleMessage(data) {
+            const messageContainer = document.getElementById("messages");
+            const message = document.createElement("li");
 
-    const parsedMessage = data.split(/:(.+)/, 2);
-    const userInfo = parsedMessage[0];
-    const msgText = parsedMessage[1];
+            const parsedMessage = data.split(/:(.+)/, 2);
+            const userInfo = parsedMessage[0];
+            const msgText = parsedMessage[1];
 
-    const userElement = document.createElement("strong");
-    userElement.innerText = userInfo + ": ";
+            const userElement = document.createElement("strong");
+            userElement.innerText = userInfo + ": ";
 
-    const msgElement = document.createElement("span");
-    msgElement.innerText = msgText;
+            const msgElement = document.createElement("span");
+            msgElement.innerText = msgText;
 
-    message.appendChild(userElement);
-    message.appendChild(msgElement);
+            message.appendChild(userElement);
+            message.appendChild(msgElement);
 
-    messageContainer.appendChild(message);
-    messageContainer.scrollTop = messageContainer.scrollHeight;
-  }
+            messageContainer.appendChild(message);
+            messageContainer.scrollTop = messageContainer.scrollHeight;
+        }
 
-    ws.onopen = function() {
-    console.log("Connected to chat");
-  };
+        ws.onopen = function () {
+            console.log("Connected to chat");
+        };
 
-    ws.onmessage = function(event) {
-    const data = event.data;
+        ws.onmessage = function (event) {
+            const data = event.data;
 
-    if (data.startsWith("Online users: ")) {
-    handleUserList(data);
-  } else {
-    handleMessage(data);
-  }
-  };
+            if (data.startsWith("Online users: ")) {
+                handleUserList(data);
+            } else {
+                handleMessage(data);
+            }
+        };
 
-    ws.onclose = function() {
-    console.log("Disconnected from chat");
-  };
+        ws.onclose = function () {
+            console.log("Disconnected from chat");
+        };
 
-    document.getElementById("submit").addEventListener("click", function(event) {
-    event.preventDefault();
-    const messageInput = document.getElementById("message");
-    ws.send(messageInput.value);
-    messageInput.value = "";
-  });
-  });
+        document.getElementById("message").addEventListener("keypress", function (event) {
+            if (event.keyCode === 13) { // 检测回车键的按下
+                event.preventDefault(); // 阻止回车键的默认行为（换行）
+                document.getElementById("submit").click(); // 触发发送消息的事件
+            }
+        });
+
+        document.getElementById("submit").addEventListener("click", function (event) {
+            event.preventDefault();
+            const messageInput = document.getElementById("message");
+            ws.send(messageInput.value);
+            messageInput.value = "";
+        });
+    });
 </script>
 </body>
 </html>
