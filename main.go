@@ -36,7 +36,7 @@ type Message struct {
 
 func main() {
 	// 打开一个数据库连接
-	db, err := sql.Open("mysql", "root:wyn117836@tcp(127.0.0.1:3306)/chatroom")
+	db, err := sql.Open("mysql", "user:password@tcp(username:port)/chatroom")
 	if err != nil {
 		fmt.Println(err)
 		return

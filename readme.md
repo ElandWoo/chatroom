@@ -117,4 +117,5 @@ db, err := sql.Open("mysql", "user:password@tcp(username:port)/chatroom")
    
 4. 开始[聊天](http://localhost:8080/chat) 
    
+
    ![./static/images/chat.png](./static/images/chat.png)
