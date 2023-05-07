@@ -69,7 +69,7 @@ go get -u github.com/go-sql-driver/mysql
 go get -u github.com/gorilla/websocket
 ```
 
-##### 数据库配置
+#### 数据库配置
 确保您的MySQL数据库已设置并运行。
 建立chatroom数据库
 ``` sql
