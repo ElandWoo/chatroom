@@ -56,6 +56,7 @@ func main() {
 	// 打开一个路由
 	router := gin.Default()
 	router.LoadHTMLGlob("templates/*.html")
+	router.Static("/static", "./static")
 
 	router.GET("/", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "index.html", nil)
