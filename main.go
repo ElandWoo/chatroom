@@ -1,15 +1,25 @@
 package main
 
 import (
+	//"bytes"
+	//"encoding/json"
+	//"io/ioutil"
+	//"log"
+
+	"bytes"
 	"database/sql"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"log"
+	"net/http"
+	"net/url"
 	"strings"
+	"sync"
 
 	"github.com/gin-gonic/gin"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/gorilla/websocket"
-	"net/http"
-	"sync"
 )
 
 var (
@@ -17,26 +27,54 @@ var (
 		ReadBufferSize:  1024,
 		WriteBufferSize: 1024,
 	}
-	msgChan = make(chan Message) // 定义全局的消息通道
+	msgChan = make(chan UserMessage) // 定义全局的消息通道
 
 	// 建立一个WebSocket连接的映射，并使用互斥锁进行保护
 	conns = struct {
 		sync.RWMutex
 		m map[*websocket.Conn]string
 	}{m: make(map[*websocket.Conn]string)}
-
 )
 
-type Message struct {
+const (
+	openaiURL    = "https://api.openai.com/v1/chat/completions"
+	openaiAPIKey = ""
+)
+
+type UserMessage struct {
 	Sender  string
 	Content string
 }
 
+type Message struct {
+	Role    string `json:"role"`
+	Content string `json:"content"`
+}
 
+type RequestBody struct {
+	Model    string    `json:"model"`
+	Messages []Message `json:"messages"`
+}
+
+type ResponseBody struct {
+	ID      string `json:"id"`
+	Object  string `json:"object"`
+	Created int    `json:"created"`
+	Choices []struct {
+		Index        int    `json:"index"`
+		FinishReason string `json:"finish_reason"`
+		Message      Message
+	} `json:"choices"`
+	Usage struct {
+		PromptTokens     int `json:"prompt_tokens"`
+		CompletionTokens int `json:"completion_tokens"`
+		TotalTokens      int `json:"total_tokens"`
+	} `json:"usage"`
+}
 
 func main() {
 	// 打开一个数据库连接
-	db, err := sql.Open("mysql", "user:password@tcp(username:port)/chatroom")
+	db, err := sql.Open("mysql", "user:password@tcp(localhost:3306)/chatroom")
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -106,7 +144,6 @@ func main() {
 		c.Redirect(http.StatusMovedPermanently, "/chat")
 	})
 
-
 	// sign up 	Interface
 	router.GET("/register", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "register.html", nil)
@@ -146,7 +183,6 @@ func main() {
 		c.Redirect(http.StatusMovedPermanently, "/chat")
 	})
 
-
 	// chat Interface
 	router.GET("/chat", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "chat.html", nil)
@@ -160,7 +196,7 @@ func main() {
 	// 在 main 函数中启动消息广播和消息保存到数据库的协程
 	go func() {
 		for {
-			msg := <-msgChan // 改为 Message 类型
+			msg := <-msgChan
 
 			// 将消息存储到数据库中
 			insertQuery := "INSERT INTO messages (sender, message) VALUES (?, ?)"
@@ -226,13 +262,18 @@ func wshandler(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 
-		message := Message{
+		message := UserMessage{
 			Sender:  username,
 			Content: fmt.Sprintf("%s (%s): %s", username, ip, string(msg)),
 		}
 
 		// 将消息发送到全局消息通道
 		msgChan <- message
+
+		//fmt.Println(message.Content)
+		//fmt.Println(chatWithGPT(message.Content).Content)
+		chatWithGPT(string(msg))
+
 	}
 
 }
@@ -248,21 +289,97 @@ func sendUserList() {
 
 	userListMessage := strings.Join(userList, ", ")
 	for conn := range conns.m {
-		if err := conn.WriteMessage(websocket.TextMessage, []byte("Online users: " + userListMessage)); err != nil {
+		if err := conn.WriteMessage(websocket.TextMessage, []byte("Online users: "+userListMessage)); err != nil {
 			fmt.Printf("Failed to send user list: %+v\n", err)
 		}
 	}
 }
 
-
-//func broadcast(username, ip, msg string) {
-//	conns.RLock()
-//	defer conns.RUnlock()
+//	func broadcast(username, ip, msg string) {
+//		conns.RLock()
+//		defer conns.RUnlock()
 //
-//	message := fmt.Sprintf("%s (%s): %s", username, ip, msg)
-//	for conn := range conns.m {
-//		if err := conn.WriteMessage(websocket.TextMessage, []byte(message)); err != nil {
-//			fmt.Printf("Failed to broadcast message: %+v\n", err)
+//		message := fmt.Sprintf("%s (%s): %s", username, ip, msg)
+//		for conn := range conns.m {
+//			if err := conn.WriteMessage(websocket.TextMessage, []byte(message)); err != nil {
+//				fmt.Printf("Failed to broadcast message: %+v\n", err)
+//			}
 //		}
 //	}
-//}
+func chatWithGPT(msg string) UserMessage {
+	reqBody := RequestBody{
+		Model: "gpt-3.5-turbo",
+		Messages: []Message{
+			{Role: "user", Content: msg},
+		},
+	}
+	payload, err := json.Marshal(reqBody)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	req, err := http.NewRequest("POST", openaiURL, bytes.NewBuffer(payload))
+	if err != nil {
+		log.Fatal(err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+openaiAPIKey)
+
+	proxyURL, err := url.Parse("http://localhost:7890") // Replace with your proxy server URL
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	client := &http.Client{
+		Transport: &http.Transport{
+			Proxy: http.ProxyURL(proxyURL),
+		},
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer resp.Body.Close()
+	fmt.Println("Response Status:", resp.Status)
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("Response Body:", string(body))
+
+	var respBody ResponseBody
+	err = json.Unmarshal(body, &respBody)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	//fmt.Printf("ID: %s\n", respBody.ID)
+	//fmt.Printf("Object: %s\n", respBody.Object)
+	//fmt.Printf("Created: %d\n", respBody.Created)
+
+	message := UserMessage{"AI", respBody.Choices[0].Message.Content}
+	fmt.Println(msg)
+	for i, choice := range respBody.Choices {
+		fmt.Printf("Choice %d:\n", i)
+		fmt.Printf("  Index: %d\n", choice.Index)
+		fmt.Printf("  Finish Reason: %s\n", choice.FinishReason)
+		fmt.Printf("  Message Role: %s\n", choice.Message.Role)
+		fmt.Printf("  Message Content: %s\n", choice.Message.Content)
+
+		message = UserMessage{"AI", respBody.Choices[0].Message.Content}
+		messageofGPT := UserMessage{
+			Sender:  "AI",
+			Content: fmt.Sprintf("%s (%s): %s", "AI", "0.0.0.0", message),
+		}
+		msgChan <- messageofGPT
+	}
+	//fmt.Printf("Usage:\n")
+	//fmt.Printf("  Prompt Tokens: %d\n", respBody.Usage.PromptTokens)
+	//fmt.Printf("  Completion Tokens: %d\n", respBody.Usage.CompletionTokens)
+	//fmt.Printf("  Total Tokens: %d\n", respBody.Usage.TotalTokens)
+
+	//message := UserMessage{"AI", respBody.Choices[0].Message.Content}
+
+	return message
+}

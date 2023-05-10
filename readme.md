@@ -119,3 +119,18 @@ db, err := sql.Open("mysql", "user:password@tcp(username:port)/chatroom")
    
 
    ![./static/images/chat.png](./static/images/chat.png)
+
+
+### 更新
+
+#### 1.01 支持接入chat-gpt
+
+在代码第41行填入gpt api key
+``` go
+const (
+	openaiURL    = "https://api.openai.com/v1/chat/completions"
+	openaiAPIKey = ""
+) 
+```
+##### 问题：
+待解决：聊天区文本不能多行显示

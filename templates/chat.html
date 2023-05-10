@@ -64,7 +64,7 @@
         }
 
         #messages {
-            height: calc(100% - 150px);
+            min-height: calc(100% - 150px);
             overflow-y: scroll;
         }
 
@@ -152,9 +152,10 @@
         <!-- 聊天消息将在这里显示 -->
     </div>
     <div class="input-container">
-        <input type="text" id="message" placeholder="Type your message...">
+        <textarea type="text" id="message" placeholder="Type your message..."></textarea>
         <button id="submit" type="submit">Send</button>
     </div>
+
 </div>
 <script>
     window.addEventListener("DOMContentLoaded", function () {
@@ -171,13 +172,13 @@
 
             const parsedMessage = data.split(/:(.+)/, 2);
             const userInfo = parsedMessage[0];
-            const msgText = parsedMessage[1];
+            const msgText = parsedMessage[1].replace(/\n/g, "<br>"); // 将换行符替换为 <br>
 
             const userElement = document.createElement("strong");
-            userElement.innerText = userInfo + ": ";
+            userElement.innerText = userInfo + ": "; // 使用 innerText 插入用户的名字
 
             const msgElement = document.createElement("span");
-            msgElement.innerText = msgText;
+            msgElement.innerHTML = msgText; // 使用 innerHTML 插入消息，这样 <br> 会被解析成HTML换行符
 
             message.appendChild(userElement);
             message.appendChild(msgElement);
@@ -203,10 +204,11 @@
         ws.onclose = function () {
             console.log("Disconnected from chat");
         };
-
-        document.getElementById("message").addEventListener("keypress", function (event) {
-            if (event.keyCode === 13) { // 检测回车键的按下
-                event.preventDefault(); // 阻止回车键的默认行为（换行）
+        document.getElementById("message").addEventListener("keydown", function (event) {
+            if (event.key === "Enter" && event.shiftKey) { // 检测 Shift+Enter 键的按下
+                event.preventDefault(); // 阻止 Shift+Enter 键的默认行为
+                const messageInput = document.getElementById("message");
+                messageInput.value += "\n"; // 添加换行符
                 document.getElementById("submit").click(); // 触发发送消息的事件
             }
         });
