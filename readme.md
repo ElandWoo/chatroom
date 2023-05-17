@@ -28,8 +28,10 @@
 ### 程序文件
 
 * main.go: 程序的主入口文件
+* main_test.go: 程序的测试文件
 * templates/: 存放 HTML 模板文件
 * static/: 存放静态资源文件
+* 设计报告.pdf：程序的设计报告
 
 ### 代码结构
 
@@ -55,6 +57,9 @@
 ``` arduino
 .
 ├── main.go
+├── main_test.go
+├── readme.md
+├── 设计报告.pdf
 ├── static
 │   ├── css
 │   │   └── ...
@@ -157,7 +162,9 @@ const (
 
 #### v0.0.2 支持接入chat-gpt
 
-在代码第41行填入gpt api key
+利用api调用chatgpt的[代码示例](chatgpt)；
+
+在main.go第41行填入gpt api key
 ``` go
 const (
 	openaiURL    = "https://api.openai.com/v1/chat/completions"
@@ -165,7 +172,5 @@ const (
 ) 
 ```
 
-1. 添加了利用api调用chatgpt的[代码示例](chatgpt)；
-2. 添加了设计报告；
 ##### 问题：
 待解决：聊天区文本不能多行显示
