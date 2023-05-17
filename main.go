@@ -1,11 +1,6 @@
 package main
 
 import (
-	//"bytes"
-	//"encoding/json"
-	//"io/ioutil"
-	//"log"
-
 	"bytes"
 	"database/sql"
 	"encoding/json"
